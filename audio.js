@@ -1,7 +1,7 @@
 /* Lecture des voix (hors ligne), enregistrement du micro. */
 const Audio_ = (() => {
   const U = window.CauUtil; let ctx = null, index = new Set(), current = null;
-  const ac = () => { if (!ctx) ctx = new AudioContext(); if (ctx.state === 'suspended') ctx.resume(); return ctx; };
+  const ac = () => { if (!ctx) ctx = new AudioContext(); if (ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {}); return ctx; };
   const VOICE_SID = { f: 0, a: 0 };
   const cache = new Map();
   async function init() { try { index = new Set(await (await fetch('audio-index.json')).json()); } catch { index = new Set(); } }
@@ -19,10 +19,25 @@ const Audio_ = (() => {
     if (buf) cache.set(k, buf);
     return buf;
   }
+  /* Sortie audio : iOS garde un son faible (écouteur d'appel) si on ne lui dit pas qu'on joue un média. */
+  const setSession = type => { try { if (navigator.audioSession && navigator.audioSession.type !== type) navigator.audioSession.type = type; } catch {} };
+  /* Même niveau pour toutes les voix : chaque clip est ramené au pic maximal, puis compressé pour paraître plus fort sans saturer. */
+  const peaks = new WeakMap();
+  function lift(buf) { let p = peaks.get(buf); if (p == null) { const d = buf.getChannelData(0); p = 0; for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > p) p = v; } peaks.set(buf, p); } return p > 1e-4 ? Math.min(0.95 / p, 40) : 1; }
+  const chains = new WeakMap();
+  function output(c) {
+    if (chains.has(c)) return chains.get(c);
+    const k = c.createDynamicsCompressor(); k.threshold.value = -26; k.knee.value = 8; k.ratio.value = 6; k.attack.value = 0.004; k.release.value = 0.14;
+    const g = c.createGain(); g.gain.value = OUT_GAIN;
+    const lim = c.createDynamicsCompressor(); lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.06;
+    k.connect(g); g.connect(lim); lim.connect(c.destination); chains.set(c, k); return k;
+  }
+  const OUT_GAIN = 1.4;
   function stop() { if (current) { try { current.stop(); } catch {} current = null; } if (window.speechSynthesis) speechSynthesis.cancel(); }
   function playBuffer(buf, rate = 1) {
     stop();
-    return new Promise(res => { const s = ac().createBufferSource(); s.buffer = buf; s.playbackRate.value = rate; s.connect(ac().destination); s.onended = () => res(); s.start(); current = s; });
+    setSession('playback');
+    return new Promise(res => { const c = ac(), s = c.createBufferSource(), g = c.createGain(); s.buffer = buf; s.playbackRate.value = rate; g.gain.value = lift(buf); s.connect(g); g.connect(output(c)); s.onended = () => res(); s.start(); current = s; });
   }
   async function say(text, voice, speed, rate) {
     if (recording) return; // un son du logiciel ne doit jamais être capté par le micro
@@ -51,10 +66,10 @@ const Audio_ = (() => {
     let stopFn = null, stopAsked = false;
     const done = (async () => {
       stop(); if (window.speechSynthesis) speechSynthesis.cancel();
-      recording = true;
+      recording = true; setSession('play-and-record');
       let stream;
-      try { stream = await openStream(deviceId); } catch (e) { recording = false; throw e; }
-      if (stopAsked) { stream.getTracks().forEach(t => t.stop()); recording = false; return { pcm: new Float32Array(0), sr: 16000, spoke: false, peak: 0, cancelled: true }; }
+      try { stream = await openStream(deviceId); } catch (e) { recording = false; setSession('playback'); throw e; }
+      if (stopAsked) { stream.getTracks().forEach(t => t.stop()); recording = false; setSession('playback'); return { pcm: new Float32Array(0), sr: 16000, spoke: false, peak: 0, cancelled: true }; }
       const c = ac(); if (c.state !== 'running') await c.resume();
       const src = c.createMediaStreamSource(stream), sink = c.createGain(); sink.gain.value = 0; sink.connect(c.destination);
       const track = stream.getAudioTracks()[0], label = track ? track.label : '';
@@ -64,7 +79,7 @@ const Audio_ = (() => {
         const finish = () => {
           if (finished) return; finished = true; recording = false;
           try { node.disconnect(); src.disconnect(); sink.disconnect(); } catch {}
-          stream.getTracks().forEach(t => t.stop());
+          stream.getTracks().forEach(t => t.stop()); setSession('playback');
           const pcm = new Float32Array(total); let o = 0; for (const ch of chunks) { pcm.set(ch, o); o += ch.length; }
           resolve({ pcm, sr: c.sampleRate, spoke: vad.speaking, peak, floor: vad.floor === Infinity ? 0 : vad.floor, label, muted: track ? track.muted : false });
         };
@@ -89,5 +104,5 @@ const Audio_ = (() => {
     })();
     return { done, stop: () => { stopAsked = true; if (stopFn) stopFn(); } };
   }
-  return { has: (v, sp, t) => index.has(U.audioKey(v, sp, t)), init, say, pcmOf, playPcm, stop, record, ac };
+  return { output, lift, has: (v, sp, t) => index.has(U.audioKey(v, sp, t)), init, say, pcmOf, playPcm, stop, record, ac };
 })();

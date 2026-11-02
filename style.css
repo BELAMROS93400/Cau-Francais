@@ -82,6 +82,7 @@ p { margin: 0; line-height: 1.5; }
 .word-pic { font-size: 112px; line-height: 1.1; }
 .word-fr { font-size: 58px; font-weight: 700; color: var(--ink); line-height: 96px; text-align: center; padding: 0 14px; }
 .phrase-fr { font-size: 36px; font-weight: 700; color: var(--ink); text-align: center; line-height: 64px; }
+.letter-example { font-size: 30px; font-weight: 700; color: var(--son); text-align: center; line-height: 1.25; }
 .gloss { font-size: 22px; color: var(--text); text-align: center; padding: 2px 10px; }
 .gloss.minor { font-size: 16px; color: var(--ink-soft); }
 .ipa { font-size: 20px; color: var(--son-dark); padding: 0 8px; }

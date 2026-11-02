@@ -121,7 +121,7 @@ function buildSteps(lesson) {
 function startLesson(lesson) { touchDay(); App.ctx.lesson = lesson; App.ctx.steps = buildSteps(lesson); App.ctx.idx = 0; App.ctx.right = 0; App.ctx.total = App.ctx.steps.filter(s => ['quiz', 'order', 'qPic'].includes(s.type)).length; nav('lesson'); }
 function nextStep() { Audio_.stop(); App.ctx.idx++; render(); }
 function learnWord(fr, wordObj) {
-  const p = prof(); if (!p.words[fr]) { p.words[fr] = { box: 0, due: Date.now() + 864e5, vi: wordObj.vi, en: wordObj.en, e: wordObj.e, say: wordObj.say }; save(); }
+  const p = prof(); if (!p.words[fr]) { p.words[fr] = { box: 0, due: Date.now() + 864e5, vi: wordObj.vi, en: wordObj.en, e: wordObj.e, say: wordObj.say, show: wordObj.show }; save(); }
 }
 function viewLesson() {
   const { lesson, steps, idx } = App.ctx;
@@ -148,6 +148,7 @@ function stepCard(stage, fr, obj, isWord) {
   const speakFn = (slow) => (isWord ? sayWord(spoken, slow) : sayPhrase(spoken, slow));
   if (obj.e) stage.append(emo(obj.e, 'word-pic'));
   stage.append(h('div', { class: isWord ? 'word-fr' : 'phrase-fr opaque' }, fr));
+  if (obj.show) stage.append(h('div', { class: 'letter-example' }, obj.show));
   if (!isWord && obj.vi) stage.append(h('div', { class: 'gloss', lang: 'vi' }, obj.vi));
   if (!isWord && App.state.trans === 'en' && obj.en) stage.append(h('div', { class: 'gloss minor' }, obj.en));
   if (isWord && gloss(obj)) stage.append(h('div', { class: 'gloss' }, gloss(obj)));
@@ -303,7 +304,7 @@ function viewReview() {
   const tr = gloss(w) || w.vi || '';
   stage.append(h('div', { class: 'gloss' }, tr));
   const reveal = h('div', { class: 'control-row' }, h('button', { class: 'btn primary', onclick: () => {
-    reveal.remove(); stage.append(h('div', { class: 'word-fr' }, fr)); sayWord(w.say || fr);
+    reveal.remove(); stage.append(h('div', { class: 'word-fr' }, fr)); if (w.show) stage.append(h('div', { class: 'letter-example' }, w.show)); sayWord(w.say || fr);
     const grade = up => { w.box = up ? Math.min(w.box + 1, BOX_DAYS.length - 1) : 0; w.due = Date.now() + BOX_DAYS[w.box] * 864e5; if (!up) w.due = Date.now() + 6e5; save(); render(); };
     const fb = h('div', { style: 'display:contents' });
     stage.append(window.Practice.micButton({ text: w.say || fr, kind: w.say ? 'sentence' : 'word', out: fb }), fb, h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => grade(false) }, t('dontKnow')), h('button', { class: 'btn primary', onclick: () => grade(true) }, t('know'))));
