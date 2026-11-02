@@ -1,7 +1,7 @@
 /* Cahier d'écolier français (réglure Seyès, encre violette) + couleurs d'estampes Đông Hồ. */
-@font-face { font-family: Andika; src: url(fonts/Andika-Regular.woff2) format('woff2'); font-weight: 400; }
-@font-face { font-family: Andika; src: url(fonts/Andika-Bold.woff2) format('woff2'); font-weight: 700; }
-@font-face { font-family: EmojiF; src: url(fonts/Twemoji.Mozilla.ttf) format('truetype'); }
+@font-face { font-family: Andika; src: url(Andika-Regular.woff2) format('woff2'); font-weight: 400; }
+@font-face { font-family: Andika; src: url(Andika-Bold.woff2) format('woff2'); font-weight: 700; }
+@font-face { font-family: EmojiF; src: url(Twemoji.Mozilla.ttf) format('truetype'); }
 :root {
   --paper: #FBFBF6; --ruler: #EDF2F9; --ruler-strong: #D5E1F1; --margin: #E7929F;
   --ink: #2E2470; --ink-soft: #5F5A8C; --text: #242133;

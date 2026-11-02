@@ -331,9 +331,11 @@ function render() {
 
 (async function boot() {
   if (window.cauWebTexts) window.cauWebTexts();
-  const saved = await window.cau.store.get();
+  let saved = null; try { saved = await window.cau.store.get(); } catch (e) { console.warn('stockage', e); }
   App.state = Object.assign({}, DEFAULT, saved || {});
-  [App.course, App.pronUnits] = await Promise.all([fetch('data/course.json').then(r => r.json()), fetch('data/pron.json').then(r => r.json())]);
+  const getJson = async f => { const r = await fetch(f); if (!r.ok) throw new Error(f + ' (' + r.status + ')'); return r.json(); };
+  try { [App.course, App.pronUnits] = await Promise.all([getJson('course.json'), getJson('pron.json')]); }
+  catch (e) { if (window.cauFail) window.cauFail(e.message); else console.error(e); return; }
   await Audio_.init();
   // Attend que practice.js et library.js soient chargés.
   await new Promise(r => setTimeout(r));

@@ -4,7 +4,7 @@ const Audio_ = (() => {
   const ac = () => { if (!ctx) ctx = new AudioContext(); if (ctx.state === 'suspended') ctx.resume(); return ctx; };
   const VOICE_SID = { f: 0, a: 0 };
   const cache = new Map();
-  async function init() { try { index = new Set(await (await fetch('data/audio-index.json')).json()); } catch { index = new Set(); } }
+  async function init() { try { index = new Set(await (await fetch('audio-index.json')).json()); } catch { index = new Set(); } }
   async function decode(voice, speed, text) {
     const k = U.audioKey(voice, speed, text);
     if (cache.has(k)) return cache.get(k);

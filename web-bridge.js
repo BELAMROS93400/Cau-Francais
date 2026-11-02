@@ -4,22 +4,22 @@
   const open = () => new Promise((res, rej) => { const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => { r.result.createObjectStore('kv'); r.result.createObjectStore('library', { keyPath: 'id' }); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
   const tx = async (store, mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction(store, mode), q = fn(t.objectStore(store)); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
   const pickFile = () => new Promise(res => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = async () => { const f = i.files[0]; res(f ? JSON.parse(await f.text()) : null); }; i.click(); });
-  const packsMeta = fetch('data/audio-packs.json').then(r => r.json()); const packs = new Map();
-  const pack = n => { if (!packs.has(n)) packs.set(n, fetch(`audio/pack-${n}.bin`).then(r => { if (!r.ok) throw new Error('pack'); return r.arrayBuffer(); })); return packs.get(n); };
+  const packsMeta = fetch('audio-packs.json').then(r => r.json()); const packs = new Map();
+  const pack = n => { if (!packs.has(n)) packs.set(n, fetch(`pack-${n}.bin`).then(r => { if (!r.ok) throw new Error('pack'); return r.arrayBuffer(); })); return packs.get(n); };
   const noEngine = () => Promise.reject(new Error('no native engine'));
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   window.cau = {
     platform: 'web',
     clip: async k => { const [n, off, len] = (await packsMeta)[k]; return (await pack(n)).slice(off, off + len); },
     store: {
-      get: () => tx('kv', 'readonly', s => s.get('state')).then(v => v || null),
-      set: state => tx('kv', 'readwrite', s => s.put(JSON.parse(JSON.stringify(state)), 'state')).then(() => true),
+      get: () => tx('kv', 'readonly', s => s.get('state')).then(v => v || null).catch(() => { try { return JSON.parse(localStorage.getItem('cau-state')); } catch { return null; } }),
+      set: state => tx('kv', 'readwrite', s => s.put(JSON.parse(JSON.stringify(state)), 'state')).then(() => true).catch(() => { try { localStorage.setItem('cau-state', JSON.stringify(state)); } catch {} return false; }),
       exportTo: async state => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(state)], { type: 'application/json' })); a.download = 'cau-francais-sauvegarde.json'; a.click(); return true; },
       importFrom: pickFile,
     },
     speech: { check: async () => ({ ok: false, detail: 'web' }), tts: noEngine, keywords: noEngine, recognize: noEngine },
     lib: {
-      list: () => tx('library', 'readonly', s => s.getAll()),
+      list: () => tx('library', 'readonly', s => s.getAll()).catch(() => []),
       save: async l => { const c = CauOnline.validateLesson(l); await tx('library', 'readwrite', s => s.put(c)); return c; },
       remove: id => tx('library', 'readwrite', s => s.delete(id)).then(() => true),
       importFile: async () => { const p = await pickFile(); return p ? CauOnline.parsePack(p) : null; },
