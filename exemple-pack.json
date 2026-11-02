@@ -1,0 +1,2 @@
+{"format":"cau-pack/1","id":"exemple","version":1,"title":"Exemple de cours (modèle pour professeurs)","age":[6,18],
+ "lessons":[{"id":"bonjour","title":"Saluer en classe","words":[{"fr":"la classe","vi":"lớp học","en":"classroom","e":"🏫"},{"fr":"le professeur","vi":"giáo viên","en":"teacher","e":"👩‍🏫"}],"phrases":[{"fr":"Bonjour à tous !","vi":"Chào tất cả mọi người!","en":"Hello everyone!"},{"fr":"Asseyez-vous, s'il vous plaît.","vi":"Xin mời ngồi.","en":"Please sit down."}]}]}
